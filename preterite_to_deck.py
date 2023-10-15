@@ -50,7 +50,19 @@ preterite_model = genanki.Model(
     </tr>
 </table>"""
         }
-    ]
+    ],
+    css=""".card {
+    font-family: arial;
+    font-size: 20px;
+    text-align: center;
+    color: black;
+    background-color: white;
+}
+
+.center {
+	margin-left: auto;
+	margin-right: auto;
+}"""
 )
 
 deck_id = random.randrange(1 << 30, 1 << 31)

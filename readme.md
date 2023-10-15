@@ -1,0 +1,9 @@
+### Filename meanings
+
+`language code-part of speech-pipeline phase.json`
+
+- language code: en, de, fr, ...
+- part of speech: v for verb, n for noun, ad for adjective, av for adverb, ...
+- pipeline phase: w for wiktextract data, i for intermediary, ...
+
+Example: `de-v-i.json`, meaning the intermediate phase of data for German verbs.

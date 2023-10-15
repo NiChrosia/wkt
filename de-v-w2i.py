@@ -30,6 +30,9 @@ try:
             if form["form"] in ["haben", "de-conj"] or "table-tags" in form["tags"]:
                 continue
 
+            if (form["form"], form["tags"]) in forms:
+                continue
+
             forms.append((form["form"], form["tags"]))
 
         all_forms[infinitive] = forms

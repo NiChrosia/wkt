@@ -81,5 +81,5 @@ except Exception as e:
 
 indent = 4 if args.pretty else None
 
-output_json = json.dumps([all_forms, all_senses], indent=indent)
+output_json = json.dumps([all_forms, all_senses], indent=indent, ensure_ascii=False)
 pathlib.Path(args.output).write_text(output_json)

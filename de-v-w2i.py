@@ -27,7 +27,7 @@ try:
         forms = []
         for form in verb["forms"]:
             # not actually forms
-            if form["form"] in ["haben", "weak", "de-conj"]:
+            if form["form"] in ["haben", "de-conj"] or "table-tags" in form["tags"]:
                 continue
 
             forms.append((form["form"], form["tags"]))
@@ -37,10 +37,10 @@ try:
         # senses
         senses = []
         for sense in verb["senses"]:
-            if ("find_of" in sense or "alt_of" in sense) or not ("glosses" in sense):
+            if ("find_of" in sense or "alt_of" in sense) or not ("raw_glosses" in sense):
                 continue
 
-            definition = sense["glosses"][0]
+            definition = sense["raw_glosses"][0]
 
             examples = []
             if "examples" in sense:
@@ -48,9 +48,6 @@ try:
                     if "english" in example:
                         foreign_text = example["text"]
                         english_text = example["english"]
-
-                        if english_text == "(please add an English translation of this quotation)":
-                            continue
                     else:
                         text = example["text"]
 
@@ -59,10 +56,15 @@ try:
                             separator = "―"
                         elif "\n" in text:
                             separator = "\n"
+                        else:
+                            continue
 
                         parts = text.split(separator)
                         foreign_text = parts[0]
                         english_text = parts[1]
+
+                    if english_text == "(please add an English translation of this quotation)":
+                        continue
 
                     examples.append((foreign_text, english_text))
 

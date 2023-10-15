@@ -23,10 +23,14 @@ try:
 
         infinitive = verb["word"]
         
-        # forms
-        forms = {}
+        # forms - use a list because multiple combinations of tags can correspond to the same form
+        forms = []
         for form in verb["forms"]:
-            forms[form["form"]] = form["tags"]
+            # not actually forms
+            if form["form"] in ["haben", "weak", "de-conj"]:
+                continue
+
+            forms.append((form["form"], form["tags"]))
 
         all_forms[infinitive] = forms
 

@@ -1,10 +1,10 @@
 import argparse, json, pathlib
 
-parser = argparse.ArgumentParser("preterite extractor")
-parser.add_argument("data", help="the path to the verb json data", type=str)
-parser.add_argument("verbs", help="the path to the list of verbs to be transformed", type=str)
-parser.add_argument("output", help="the path for the extracted json data", type=str)
-parser.add_argument("-p", "--pretty", help="whether to store the output with pretty print", action="store_true")
+parser = argparse.ArgumentParser("intermediary and verblist to preterite transformer")
+parser.add_argument("data", help="intermediary json path", type=str)
+parser.add_argument("verbs", help="verblist path", type=str)
+parser.add_argument("output", help="preterite output path", type=str)
+parser.add_argument("-p", "--pretty", help="whether to use pretty print", action="store_true")
 
 args = parser.parse_args()
 

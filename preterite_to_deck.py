@@ -2,7 +2,7 @@ import argparse, json, pathlib, genanki, random
 
 parser = argparse.ArgumentParser("preterite to deck transformer")
 parser.add_argument("data", help="preterite json path", type=str)
-parser.add_argument("output", help="deck path", type=str)
+parser.add_argument("output", help="deck output path", type=str)
 
 args = parser.parse_args()
 

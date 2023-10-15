@@ -1,9 +1,9 @@
 import argparse, json, pathlib, pprint
 
-parser = argparse.ArgumentParser("transformer")
-parser.add_argument("input", help="the path to the wiktextract json data", type=str)
-parser.add_argument("output", help="the path for the intermediary json data", type=str)
-parser.add_argument("-p", "--pretty", help="whether to store the output with pretty print", action="store_true")
+parser = argparse.ArgumentParser("Wiktionary to intermediary transformer")
+parser.add_argument("input", help="wiktextract json path", type=str)
+parser.add_argument("output", help="intermediary output path", type=str)
+parser.add_argument("-p", "--pretty", help="whether to use pretty print", action="store_true")
 
 args = parser.parse_args()
 
@@ -83,6 +83,6 @@ except Exception as e:
     raise e
 
 indent = 4 if args.pretty else None
-
 output_json = json.dumps([all_forms, all_senses], indent=indent, ensure_ascii=False)
+
 pathlib.Path(args.output).write_text(output_json)

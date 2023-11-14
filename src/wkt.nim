@@ -1,62 +1,62 @@
-import argparse
-import std/[strutils, strformat, json, jsonutils]
-import preprocess
-
-# this *is* actually used to make toJson(HashSet)
-# give a list-like output instead of the raw internals
-# of HashSet, but nim doesn't seem to realize that
-import std/sets
+import argparse, jsony
+import std/[strutils, strformat]
+import types
 
 type
     PartOfSpeech = enum
         posVerb = "verb",
         posNoun = "noun",
 
-proc pps(input, output: string, pos: string, pretty: bool) =
+proc pps(input, output: string, pos: string) =
     # validate
     if not fileExists(input):
         quit(fmt"Invalid file {input}!", 1)
-
-    # process
-    let inputJson = input
-        .readFile()
-        .split("\n")
-        .filterIt(it != "")
-        .mapIt(parseJson(it))
 
     let posEnum = try:
         parseEnum[PartOfSpeech](pos)
     except ValueError:
         quit(fmt"Invalid part of speech {pos}!", 1)
 
+    # process
+    let inputLines = input
+        .readFile()
+        .split("\n")
+        .filterIt(it != "")
+
     var outputJson = case posEnum
     of posVerb:
-        let verbs = preprocessVerbs(inputJson)
+        var verbs: seq[Verb]
+
+        for line in inputLines:
+            let verb = line.fromJson(Verb)
+
+            if verb.senses.len > 0:
+                verbs.add(verb)
+
         toJson(verbs)
     of posNoun:
-        let nouns = preprocessNouns(inputJson)
+        var nouns: seq[Noun]
+
+        for line in inputLines:
+            let noun = line.fromJson(Noun)
+
+            if noun.senses.len > 0:
+                nouns.add(noun)
+
         toJson(nouns)
 
-    let outputData = if pretty:
-        outputJson.pretty(indent = 4)
-    else:
-        $outputJson
-
-    writeFile(output, outputData)
+    writeFile(output, outputJson)
 
 var parser = newParser:
     command("pps"):
         help("Preprocess Wiktextract JSON data into a more convenient representation.")
-
-        flag("-p", "--pretty", help="Pretty print")
 
         arg("input", help="Path to Wiktextract JSON data")
         arg("output", help="Write path for intermediary data")
         arg("pos", help="The POS to extract; can be one of \"verb\", \"noun\"")
 
         run:
-            pps(opts.input, opts.output, opts.pos, opts.pretty)
-
+            pps(opts.input, opts.output, opts.pos)
 try:
     let params = commandLineParams()
     parser.run(params)

@@ -1,6 +1,6 @@
 import argparse, jsony
-import std/[strutils, strformat]
-import types
+import std/[strutils, strformat, tables]
+import types, parse, index
 
 type
     PartOfSpeech = enum
@@ -8,6 +8,7 @@ type
         posNoun = "noun",
         posAdj = "adj",
 
+# commands
 proc pps(input, output: string, pos: string) =
     # validate
     if not fileExists(input):
@@ -33,7 +34,7 @@ proc pps(input, output: string, pos: string) =
             if word.forms.len > 0 and word.senses.len > 0:
                 words.add(word)
 
-        toJson(words)
+        words.toJson()
 
     var outputJson = case posEnum
     of posVerb: processPos(inputLines, Verb)
@@ -41,6 +42,29 @@ proc pps(input, output: string, pos: string) =
     of posAdj: processPos(inputLines, Adjective)
 
     writeFile(output, outputJson)
+
+proc idx(input, output: string, pos: string) =
+    if not fileExists(input):
+        quit(fmt"Invalid file {input}!", 1)
+
+    let posEnum = try:
+        parseEnum[PartOfSpeech](pos)
+    except ValueError:
+        quit(fmt"Invalid part of speech {pos}!", 1)
+
+    index.active = true
+
+    template processPos(contents: string, T: typedesc) =
+        discard contents.fromJson(T)
+
+    let contents = readFile(input)
+
+    case posEnum
+    of posVerb: processPos(contents, seq[IntVerb])
+    of posNoun: processPos(contents, seq[IntNoun])
+    of posAdj: processPos(contents, seq[IntAdjective])
+
+    writeFile(output, indices.toJson())
 
 var parser = newParser:
     command("pps"):
@@ -52,6 +76,16 @@ var parser = newParser:
 
         run:
             pps(opts.input, opts.output, opts.pos)
+
+    command("idx"):
+        help("Indexes an intermediary file for more efficient access at scale.")
+
+        arg("input", help="Path to intermediary data")
+        arg("output", help="Write path for index json")
+        arg("pos", help="The POS to extract; can be one of \"verb\", \"noun\", \"adj\"")
+
+        run:
+            idx(opts.input, opts.output, opts.pos)
 try:
     let params = commandLineParams()
     parser.run(params)

@@ -19,6 +19,14 @@ type
 
         sounds*: WordSounds
 
+    Adjective* = object
+        word*: string
+
+        forms*: seq[WordForm]
+        senses*: seq[WordSense]
+
+        sounds*: WordSounds
+
     # - sense
     WordSense* = object
         text*: string

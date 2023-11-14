@@ -6,6 +6,7 @@ type
     PartOfSpeech = enum
         posVerb = "verb",
         posNoun = "noun",
+        posAdj = "adj",
 
 proc pps(input, output: string, pos: string) =
     # validate
@@ -23,27 +24,21 @@ proc pps(input, output: string, pos: string) =
         .split("\n")
         .filterIt(it != "")
 
+    template processPos(lines: seq[string], T: typedesc): string =
+        var words: seq[T]
+
+        for line in inputLines:
+            let word = line.fromJson(T)
+
+            if word.forms.len > 0 and word.senses.len > 0:
+                words.add(word)
+
+        toJson(words)
+
     var outputJson = case posEnum
-    of posVerb:
-        var verbs: seq[Verb]
-
-        for line in inputLines:
-            let verb = line.fromJson(Verb)
-
-            if verb.senses.len > 0:
-                verbs.add(verb)
-
-        toJson(verbs)
-    of posNoun:
-        var nouns: seq[Noun]
-
-        for line in inputLines:
-            let noun = line.fromJson(Noun)
-
-            if noun.senses.len > 0:
-                nouns.add(noun)
-
-        toJson(nouns)
+    of posVerb: processPos(inputLines, Verb)
+    of posNoun: processPos(inputLines, Noun)
+    of posAdj: processPos(inputLines, Adjective)
 
     writeFile(output, outputJson)
 
@@ -53,7 +48,7 @@ var parser = newParser:
 
         arg("input", help="Path to Wiktextract JSON data")
         arg("output", help="Write path for intermediary data")
-        arg("pos", help="The POS to extract; can be one of \"verb\", \"noun\"")
+        arg("pos", help="The POS to extract; can be one of \"verb\", \"noun\", \"adj\"")
 
         run:
             pps(opts.input, opts.output, opts.pos)

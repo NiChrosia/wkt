@@ -1,17 +1,23 @@
 import argparse, jsony
-import std/[strutils, strformat, tables]
+import std/[strutils, strformat, tables, streams]
 import types, parse, index
+
+proc validateFiles(files: varargs[string]) =
+    for file in files:
+        if not fileExists(file):
+            quit(fmt"Invalid file {file}!", 1)
+
+proc parsePos(raw: string): PartOfSpeech =
+    return try:
+        parseEnum[PartOfSpeech](raw)
+    except ValueError:
+        quit(fmt"Invalid part of speech {raw}!", 1)
 
 # commands
 proc pps(input, output: string, pos: string) =
     # validate
-    if not fileExists(input):
-        quit(fmt"Invalid file {input}!", 1)
-
-    let posEnum = try:
-        parseEnum[PartOfSpeech](pos)
-    except ValueError:
-        quit(fmt"Invalid part of speech {pos}!", 1)
+    validateFiles(input)
+    let posEnum = parsePos(pos)
 
     # process
     let inputLines = input
@@ -45,13 +51,8 @@ proc idx(output: string, interleavedInputs: seq[string]) =
         let path = interleavedInputs[i]
         let posStr = interleavedInputs[i + 1]
 
-        if not fileExists(path):
-            quit(fmt"Invalid file {path}!", 1)
-
-        let pos = try:
-            parseEnum[PartOfSpeech](posStr)
-        except ValueError:
-            quit(fmt"Invalid part of speech {posStr}!", 1)
+        validateFiles(path)
+        let pos = parsePos(posStr)
 
         inputs.add((path, pos))
 
@@ -70,6 +71,76 @@ proc idx(output: string, interleavedInputs: seq[string]) =
         of posAdj: processPos(contents, seq[IntAdjective])
 
     writeFile(output, indices.toJson())
+
+proc fil(index, list, output: string) =
+    validateFiles(index, list)
+
+    let indices = index
+        .readFile()
+        .fromJson(Table[string, Index])
+
+    let words = list
+        .readFile()
+        .split("\n")
+        .filterIt(it != "")
+
+    template process[T](index: Index, stream: Stream): T =
+        var size = 1000
+
+        var result: T
+        var invalid = true
+
+        while invalid:
+            stream.setPosition(index.index)
+
+            try:
+                let s = stream.readStr(size)
+                var i = 0
+
+                parseHook(s, i, result)
+                invalid = false
+            except ValueError:
+                size *= 2
+            except IOError:
+                discard stream.readLine()
+                size = stream.getPosition() - index.index + 1
+
+        result
+
+    # streams for the intermediary files
+    var intStreams: Table[string, FileStream]
+    var wordObjs: seq[Noun]
+
+    for word in words:
+        if word notin indices:
+            quit(fmt"Word '{word}' not in indices!", 1)
+
+        let index = indices[word]
+        let file = index.file
+
+        validateFiles(file)
+
+        if file notin intStreams:
+            intStreams[file] = newFileStream(file)
+
+        var stream = intStreams[file]
+
+        # casting everything to a noun is a cursed solution, but it works for now
+        # since nouns, verbs, and adjectives are almost structurally identical
+
+        # TODO: find some solution to this, or, if you can, eliminate the
+        # word typing altogether
+        let wordObj = case index.pos
+        of posNoun: process[IntNoun](index, stream).Noun
+        of posVerb: cast[Noun](process[IntVerb](index, stream).Verb)
+        of posAdj: cast[Noun](process[IntAdjective](index, stream).Adjective)
+
+        wordObjs.add(wordObj)
+
+    for stream in intStreams.values:
+        stream.close()
+
+    writeFile(output, wordObjs.toJson())
 
 var parser = newParser:
     command("pps"):
@@ -90,6 +161,16 @@ var parser = newParser:
 
         run:
             idx(opts.output, opts.inputs)
+
+    command("fil"):
+        help("Filters words from an index file into a new hybrid intermediary file.")
+
+        arg("index", help = "Path to index json")
+        arg("list", help = "Path to newline-separated word list")
+        arg("output", help = "Write path for hybrid intermediary file")
+
+        run:
+            fil(opts.index, opts.list, opts.output)
 try:
     let params = commandLineParams()
     parser.run(params)

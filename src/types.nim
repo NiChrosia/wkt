@@ -1,4 +1,9 @@
 type
+    PartOfSpeech* = enum
+        posVerb = "verb",
+        posNoun = "noun",
+        posAdj = "adj",
+
     # word
     Verb* = object
         word*: string

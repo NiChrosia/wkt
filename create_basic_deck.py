@@ -1,7 +1,7 @@
 import argparse, pathlib, json, genanki, random, urllib.request
 
 parser = argparse.ArgumentParser("Basic deck creator")
-parser.add_argument("email", help="Email to use in the User-Agent field")
+parser.add_argument("-e", "--email", help="Email to use in the User-Agent field, if downloading sounds is desired")
 parser.add_argument("input", help="Path to hybrid intermediary json")
 parser.add_argument("output", help="Write path for Anki deck")
 
@@ -10,18 +10,28 @@ args = parser.parse_args()
 input_contents = pathlib.Path(args.input).read_text()
 input_json = json.loads(input_contents)
 
-model = genanki.Model(1190423014, "Word, Sound, and Definitions", fields=[
-        {"name": "Word"},
-        {"name": "Ipa"},
-        {"name": "Definitions"},
-        {"name": "Sound"},
-    ], templates=[{
-        "name": "Card 1",
-        "qfmt": "<span>{{Word}}{{Ipa}}</span><br>{{Sound}}",
-        "afmt": '{{FrontSide}}<hr id="answer">{{Definitions}}',
-    }])
+soundless_model = genanki.Model(1806880585, "Word and Definitions", fields=[
+    {"name": "Word"},
+    {"name": "Ipa"},
+    {"name": "Definitions"},
+], templates=[{
+    "name": "Card 1",
+    "qfmt": "<span>{{Word}}{{Ipa}}</span><br>",
+    "afmt": '{{FrontSide}}<hr id="answer">{{Definitions}}',
+}])
 
-deck = genanki.Deck(random.randrange(1 << 30, 1 << 31), "Basic Deck")
+model = genanki.Model(1190423014, "Word, Sound, and Definitions", fields=[
+    {"name": "Word"},
+    {"name": "Ipa"},
+    {"name": "Definitions"},
+    {"name": "Sound"},
+], templates=[{
+    "name": "Card 1",
+    "qfmt": "<span>{{Word}}{{Ipa}}</span><br>{{Sound}}",
+    "afmt": '{{FrontSide}}<hr id="answer">{{Definitions}}',
+}])
+
+deck = genanki.Deck(random.randrange(1 << 30, 1 << 31), "Wiktionary Deck")
 full_audio_files = []
 
 pathlib.Path("tmp").mkdir(parents=True, exist_ok=True)
@@ -38,27 +48,28 @@ for word in input_json:
         ipa = " - " + ipa
 
     # audio
-    audio_urls = word["sounds"]["files"]
+    if args.email:
+        audio_urls = word["sounds"]["files"]
 
-    full_audio_file = ""
-    audio_file = ""
+        full_audio_file = ""
+        audio_file = ""
 
-    if len(audio_urls) > 0:
-        audio_url = audio_urls[0]["oggUrl"]
+        if len(audio_urls) > 0:
+            audio_url = audio_urls[0]["oggUrl"]
 
-        parts = audio_url.split("/")
-        filename = parts[-1]
+            parts = audio_url.split("/")
+            filename = parts[-1]
 
-        req = urllib.request.Request(audio_url)
-        req.add_header("User-Agent", f"WiktionaryAnkiTransformer/0.0 ({args.email})")
+            req = urllib.request.Request(audio_url)
+            req.add_header("User-Agent", f"WiktionaryAnkiTransformer/0.0 ({args.email})")
 
-        contents = urllib.request.urlopen(req).read()
-        pathlib.Path(f"tmp/{filename}").write_bytes(contents)
+            contents = urllib.request.urlopen(req).read()
+            pathlib.Path(f"tmp/{filename}").write_bytes(contents)
 
-        full_audio_file = f"./tmp/{filename}"
-        audio_file = filename
+            full_audio_file = f"./tmp/{filename}"
+            audio_file = filename
 
-    full_audio_files.append(full_audio_file)
+        full_audio_files.append(full_audio_file)
 
     # definitions
     definitions = []
@@ -93,7 +104,12 @@ for word in input_json:
 
     html += "</ol>"
 
-    note = genanki.Note(model=model, fields=[name, ipa, html, f"[sound:{audio_file}]"])
+    if args.email:
+        # the variable is guaranteed to be there, as it's only defined when args.email is not None - the same as this branch
+        note = genanki.Note(model=model, fields=[name, ipa, html, f"[sound:{audio_file}]"]) # pyright: ignore [reportUnboundVariable]
+    else:
+        note = genanki.Note(model=soundless_model, fields=[name, ipa, html])
+
     deck.add_note(note)
 
 package = genanki.Package(deck)
